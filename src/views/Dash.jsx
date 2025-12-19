@@ -1,12 +1,27 @@
+import { useState, useEffect } from 'react';
 import { useStore } from '../store';
-import { aggregateMonthlyHours } from '../lib/calc';
+// import { aggregateMonthlyHours } from '../lib/calc';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Plane, Users, DollarSign, Clock } from 'lucide-react';
 
 export default function Dashboard() {
     const { data } = useStore();
+    const [monthlyData, setMonthlyData] = useState({});
 
-    const monthlyData = aggregateMonthlyHours(data.laborEntries, data.laborCategories);
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/api/stats/monthly-labor');
+                if (res.ok) {
+                    const json = await res.json();
+                    setMonthlyData(json);
+                }
+            } catch (e) {
+                console.error("Failed to fetch monthly stats", e);
+            }
+        };
+        fetchStats();
+    }, [data.laborEntries]); // Refetch if entries change
 
     // Transform for Recharts
     const chartData = Object.entries(monthlyData).map(([month, categories]) => {

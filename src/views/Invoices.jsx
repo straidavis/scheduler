@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { generateId, cn } from '../lib/utils';
 import { format, parseISO } from 'date-fns';
 import { Plus, FileText, CheckCircle, Clock, Trash, Edit2, X, Paperclip, Upload, MinusCircle } from 'lucide-react';
-import { generateBillingItems } from '../lib/bill';
+// import { generateBillingItems } from '../lib/bill';
 
 export default function Invoices() {
     const { data, addInvoice, updateInvoice, deleteInvoice, bulkUpdateBillingItems } = useStore();
@@ -11,6 +11,7 @@ export default function Invoices() {
     const [editingId, setEditingId] = useState(null);
     const [selectedBillingItems, setSelectedBillingItems] = useState(new Set());
     const fileInputRef = useRef(null);
+    const [allBillingItems, setAllBillingItems] = useState([]);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -23,14 +24,20 @@ export default function Invoices() {
     });
 
     // Get all billing items to allow selection for new invoice
-    const allBillingItems = data.deployments.flatMap(d => {
-        const rates = {
-            period15DayRate: parseFloat(d.clinPrice15) || 0,
-            dailyRate: parseFloat(d.clinPriceSingle) || 0,
-            overAndAboveRate: parseFloat(d.clinPriceOverAbove) || 0
+    useEffect(() => {
+        const fetchItems = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/api/billing-items');
+                if (res.ok) {
+                    const json = await res.json();
+                    setAllBillingItems(json);
+                }
+            } catch (e) {
+                console.error("Failed to fetch billing items", e);
+            }
         };
-        return generateBillingItems(d, rates);
-    });
+        fetchItems();
+    }, [data.deployments]);
 
     // Filter items that are NOT yet invoiced (or belong to the invoice being edited)
     const availableItems = allBillingItems.filter(item => {

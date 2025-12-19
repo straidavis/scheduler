@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store';
-import { generateBillingItems } from '../lib/bill';
+// import { generateBillingItems } from '../lib/bill';
 import { format, parseISO, isBefore, startOfDay } from 'date-fns';
 import { FileText, CheckCircle, Clock, AlertCircle, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -18,17 +18,25 @@ export default function Billing() {
         invoiceNumber: ''
     });
 
-    const allItems = data.deployments.flatMap(d => {
-        const rates = {
-            period15DayRate: parseFloat(d.clinPrice15) || 0,
-            dailyRate: parseFloat(d.clinPriceSingle) || 0,
-            overAndAboveRate: parseFloat(d.clinPriceOverAbove) || 0
+    const [items, setItems] = useState([]);
+
+    useEffect(() => {
+        const fetchItems = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/api/billing-items');
+                if (res.ok) {
+                    const json = await res.json();
+                    setItems(json);
+                }
+            } catch (e) {
+                console.error("Failed to fetch billing items", e);
+            }
         };
-        return generateBillingItems(d, rates);
-    });
+        fetchItems();
+    }, [data.deployments]); // Re-fetch if deployments change
 
     // Enrich items with invoice data
-    const enrichedItems = allItems.map(item => {
+    const enrichedItems = items.map(item => {
         const state = data.billingState[item.id] || {};
         const invoice = data.invoices.find(inv => inv.invoiceNumber === state.invoiceNumber);
 

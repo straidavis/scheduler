@@ -30,18 +30,27 @@ export default function Deployments() {
     const [newDeployment, setNewDeployment] = useState({ ...emptyDeployment });
 
     // Auto-populate Fiscal Year and Ordering Period when Start Date changes
+    // Auto-populate Fiscal Year and Ordering Period when Start Date changes
     useEffect(() => {
-        if (newDeployment.startDate) {
-            const fy = getFiscalYear(newDeployment.startDate);
-            const period = getOrderingPeriod(newDeployment.startDate);
+        if (!newDeployment.startDate) return;
 
-            setNewDeployment(prev => ({
-                ...prev,
-                fiscalYear: fy,
-                orderingPeriodStart: period ? period.start : prev.orderingPeriodStart,
-                orderingPeriodEnd: period ? period.end : prev.orderingPeriodEnd
-            }));
-        }
+        const fetchData = async () => {
+            try {
+                const res = await fetch(`http://localhost:8000/api/calculate-date-info?date=${newDeployment.startDate}`);
+                if (res.ok) {
+                    const info = await res.json();
+                    setNewDeployment(prev => ({
+                        ...prev,
+                        fiscalYear: info.fiscalYear,
+                        orderingPeriodStart: info.orderingPeriod ? info.orderingPeriod.start : prev.orderingPeriodStart,
+                        orderingPeriodEnd: info.orderingPeriod ? info.orderingPeriod.end : prev.orderingPeriodEnd
+                    }));
+                }
+            } catch (e) {
+                console.error("Failed to fetch date info", e);
+            }
+        };
+        fetchData();
     }, [newDeployment.startDate]);
 
     const handleSave = () => {

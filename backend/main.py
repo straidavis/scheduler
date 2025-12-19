@@ -65,6 +65,44 @@ async def calculate_date_info(date: str):
     period = get_ordering_period(date)
     return {"fiscalYear": fy, "orderingPeriod": period}
 
+from logic_billing import calculate_billing_periods
+from logic_labor import calculate_weekly_overtime
+
+class BillingRequest(BaseModel):
+    startDate: str
+    endDate: str
+    type: str
+
+@app.post("/api/calculations/billing-periods")
+async def api_billing_periods(req: BillingRequest):
+    return calculate_billing_periods(req.startDate, req.endDate, req.type)
+
+class OvertimeRequest(BaseModel):
+    entries: List[Dict[str, Any]]
+    categories: List[Dict[str, Any]]
+
+@app.post("/api/calculations/overtime")
+async def api_overtime(req: OvertimeRequest):
+    return calculate_weekly_overtime(req.entries, req.categories)
+
+from logic_billing import generate_all_billing_items
+
+@app.get("/api/billing-items")
+async def get_billing_items():
+    data = load_data()
+    items = generate_all_billing_items(data.get("deployments", []))
+    return items
+
+from logic_labor import aggregate_monthly_hours
+
+@app.get("/api/stats/monthly-labor")
+async def get_monthly_labor():
+    data = load_data()
+    return aggregate_monthly_hours(data.get("laborEntries", []), data.get("laborCategories", []))
+
+
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
