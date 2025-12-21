@@ -70,20 +70,19 @@ def generate_billing_items_for_deployment(d: Dict[str, Any]) -> List[Dict[str, A
     
     # If Shore: Remainder is "Daily Rate".
     if d.get('type') == 'Shore' and remainder > 0:
-        # One item for the whole remainder block? or per day?
-        # Usually billed as a block of days x daily rate
-        remainder_end = end
-        amount = remainder * rate_daily
-        items.append({
-            "id": f"{d['id']}_daily",
-            "deploymentId": d['id'],
-            "deploymentName": d['name'],
-            "type": "Daily Rate",
-            "startDate": current_date.isoformat(),
-            "endDate": remainder_end.isoformat(),
-            "amount": amount,
-            "description": f"{remainder} days @ ${rate_daily}/day"
-        })
+        # User requested separate lines for each 1day CLIN
+        for i in range(remainder):
+            day_date = current_date + timedelta(days=i)
+            items.append({
+                "id": f"{d['id']}_daily_{day_date.strftime('%Y%m%d')}",
+                "deploymentId": d['id'],
+                "deploymentName": d['name'],
+                "type": "Daily Rate",
+                "startDate": day_date.isoformat(),
+                "endDate": day_date.isoformat(),
+                "amount": rate_daily,
+                "description": f"Day {i+1} of remainder"
+            })
         
     # If Land: Over & Above. 
     # Logic unclear from code, but UI says "Over & Above (Daily Cap)".

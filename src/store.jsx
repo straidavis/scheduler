@@ -14,6 +14,7 @@ const INITIAL_DATA = {
         { year: 2025, periodRates: {} }
     ],
     invoices: [],
+    overhead: [], // { id, categoryId, month, hours }
     billingState: {} // Map of billingItemId -> { status, invoiceNumber }
 };
 
@@ -70,10 +71,14 @@ export function StoreProvider({ children }) {
         setData(prev => ({
             ...prev,
             deployments: prev.deployments.map(d => d.id === id ? { ...d, ...updates } : d),
-            // Shift labor entries that belong to this deployment
-            laborEntries: prev.laborEntries.map(entry =>
-                entry.deploymentId === id ? { ...entry, startDate: updates.startDate, endDate: updates.endDate } : entry
-            )
+            // Shift labor entries only if dates are provided in updates
+            laborEntries: ('startDate' in updates || 'endDate' in updates) ? prev.laborEntries.map(entry =>
+                entry.deploymentId === id ? {
+                    ...entry,
+                    startDate: updates.startDate !== undefined ? updates.startDate : entry.startDate,
+                    endDate: updates.endDate !== undefined ? updates.endDate : entry.endDate
+                } : entry
+            ) : prev.laborEntries
         }));
     };
 
@@ -94,6 +99,13 @@ export function StoreProvider({ children }) {
         setData(prev => ({
             ...prev,
             laborCategories: prev.laborCategories.map(c => c.id === id ? { ...c, ...updates } : c)
+        }));
+    };
+
+    const deleteLaborCategory = (id) => {
+        setData(prev => ({
+            ...prev,
+            laborCategories: prev.laborCategories.filter(c => c.id !== id)
         }));
     };
 
@@ -147,6 +159,10 @@ export function StoreProvider({ children }) {
         });
     };
 
+    const setOverhead = (newOverhead) => {
+        setData(prev => ({ ...prev, overhead: newOverhead }));
+    };
+
     return (
         <StoreContext.Provider value={{
             data,
@@ -154,6 +170,7 @@ export function StoreProvider({ children }) {
             updateDeployment,
             addLaborCategory,
             updateLaborCategory,
+            deleteLaborCategory,
             addLaborEntry,
             addInvoice,
             updateInvoice,
@@ -162,7 +179,8 @@ export function StoreProvider({ children }) {
             deleteInvoice,
             updateBillingItem,
             bulkUpdateBillingItems,
-            deleteDeployment
+            deleteDeployment,
+            setOverhead
         }}>
             {children}
         </StoreContext.Provider>

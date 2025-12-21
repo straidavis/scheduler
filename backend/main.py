@@ -27,6 +27,7 @@ INITIAL_DATA = {
         { "id": 'lc_3', "name": 'Junior Engineer', "isOvertimeEligible": True, "baseRate": 80 },
     ],
     "laborEntries": [],
+    "overhead": [],
     "fiscalYearRates": [
         { "year": 2025, "periodRates": {} }
     ],
@@ -66,7 +67,7 @@ async def calculate_date_info(date: str):
     return {"fiscalYear": fy, "orderingPeriod": period}
 
 from logic_billing import calculate_billing_periods
-from logic_labor import calculate_weekly_overtime
+# from logic_labor import calculate_weekly_overtime # Deprecated
 
 class BillingRequest(BaseModel):
     startDate: str
@@ -77,13 +78,14 @@ class BillingRequest(BaseModel):
 async def api_billing_periods(req: BillingRequest):
     return calculate_billing_periods(req.startDate, req.endDate, req.type)
 
-class OvertimeRequest(BaseModel):
-    entries: List[Dict[str, Any]]
-    categories: List[Dict[str, Any]]
+# Overtime endpoint deprecated in favor of internal plan aggregation
+# class OvertimeRequest(BaseModel):
+#     entries: List[Dict[str, Any]]
+#     categories: List[Dict[str, Any]]
 
-@app.post("/api/calculations/overtime")
-async def api_overtime(req: OvertimeRequest):
-    return calculate_weekly_overtime(req.entries, req.categories)
+# @app.post("/api/calculations/overtime")
+# async def api_overtime(req: OvertimeRequest):
+#     return calculate_weekly_overtime(req.entries, req.categories)
 
 from logic_billing import generate_all_billing_items
 
@@ -98,7 +100,11 @@ from logic_labor import aggregate_monthly_hours
 @app.get("/api/stats/monthly-labor")
 async def get_monthly_labor():
     data = load_data()
-    return aggregate_monthly_hours(data.get("laborEntries", []), data.get("laborCategories", []))
+    return aggregate_monthly_hours(
+        data.get("deployments", []), 
+        data.get("overhead", []), 
+        data.get("laborCategories", [])
+    )
 
 
 

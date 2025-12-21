@@ -4,7 +4,7 @@ import { useStore } from '../store';
 import { generateId, cn } from '../lib/utils';
 import { getFiscalYear, getOrderingPeriod } from '../lib/dateUtils';
 import { Plus, Calendar as CalendarIcon, MapPin, Anchor, Trash } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isBefore, isAfter, startOfDay } from 'date-fns';
 
 export default function Deployments() {
     const { data, addDeployment, updateDeployment, deleteDeployment } = useStore();
@@ -57,6 +57,19 @@ export default function Deployments() {
         if (!newDeployment.name || !newDeployment.startDate) {
             alert('Please fill in Name and Start Date');
             return;
+        }
+
+        // Status Protection Warning
+        if (editingId) {
+            const original = data.deployments.find(d => d.id === editingId);
+            if (original) {
+                const status = getComputedStatus(original.startDate, original.endDate);
+                if (status === 'Started' && original.startDate !== newDeployment.startDate) {
+                    if (!confirm("⚠️ Warning: This deployment has alread started.\n\nChanging the start date may affect existing billing cycles and labor history. Are you sure you want to proceed?")) {
+                        return;
+                    }
+                }
+            }
         }
 
         // Labor Planning Validation
@@ -130,6 +143,20 @@ export default function Deployments() {
             </svg>
         );
     }
+
+    const getComputedStatus = (start, end) => {
+        if (!start) return 'Draft';
+        const now = startOfDay(new Date());
+        const s = startOfDay(parseISO(start));
+
+        if (isBefore(now, s)) return 'Planned';
+
+        if (end) {
+            const e = startOfDay(parseISO(end));
+            if (isAfter(now, e)) return 'Completed';
+        }
+        return 'Started';
+    };
 
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-8">
@@ -328,23 +355,38 @@ export default function Deployments() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                    onClick={() => startEdit(d)}
-                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (confirm('Are you sure you want to delete this deployment?')) {
-                                            deleteDeployment(d.id);
+                            <div className="flex flex-col items-end gap-2">
+                                <span className={cn(
+                                    "px-2.5 py-1 rounded-full text-xs font-semibold border",
+                                    (() => {
+                                        const status = getComputedStatus(d.startDate, d.endDate);
+                                        switch (status) {
+                                            case 'Started': return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800";
+                                            case 'Completed': return "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700";
+                                            default: return "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800";
                                         }
-                                    }}
-                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                >
-                                    <Trash size={18} />
-                                </button>
+                                    })()
+                                )}>
+                                    {getComputedStatus(d.startDate, d.endDate)}
+                                </span>
+                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={() => startEdit(d)}
+                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('Are you sure you want to delete this deployment?')) {
+                                                deleteDeployment(d.id);
+                                            }
+                                        }}
+                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                    >
+                                        <Trash size={18} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

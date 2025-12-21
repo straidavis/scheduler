@@ -1,41 +1,92 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '../store';
-// import { aggregateMonthlyHours } from '../lib/calc';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, addDays, addMonths, isBefore } from 'date-fns';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Plane, Users, DollarSign, Clock } from 'lucide-react';
 
 export default function Dashboard() {
     const { data } = useStore();
-    const [monthlyData, setMonthlyData] = useState({});
+    const chartData = useMemo(() => {
+        const buckets = {};
+        const laborCategories = data.laborCategories || [];
+        const deployments = data.deployments || [];
+        const overheadData = data.overhead || [];
 
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const res = await fetch('http://localhost:8000/api/stats/monthly-labor');
-                if (res.ok) {
-                    const json = await res.json();
-                    setMonthlyData(json);
-                }
-            } catch (e) {
-                console.error("Failed to fetch monthly stats", e);
+        const ensureBucket = (date) => {
+            const key = format(date, 'yyyy-MM');
+            if (!buckets[key]) {
+                buckets[key] = {
+                    date: startOfMonth(date),
+                    name: format(date, 'MMM yy'),
+                    total: 0
+                };
+                laborCategories.forEach(c => buckets[key][c.name] = 0);
             }
+            return key;
         };
-        fetchStats();
-    }, [data.laborEntries]); // Refetch if entries change
 
-    // Transform for Recharts
-    const chartData = Object.entries(monthlyData).map(([month, categories]) => {
-        const entry = { name: month };
-        Object.entries(categories).forEach(([catId, hours]) => {
-            const cat = data.laborCategories.find(c => c.id === catId);
-            if (cat) {
-                entry[cat.name] = hours;
+        const addToBucket = (day, catId, hours) => {
+            const cat = laborCategories.find(c => c.id === catId);
+            if (!cat) return;
+            const key = ensureBucket(day);
+            buckets[key][cat.name] = (buckets[key][cat.name] || 0) + (hours || 0);
+            buckets[key].total += (hours || 0);
+        };
+
+        // 1. Process Deployments
+        deployments.forEach(d => {
+            if (d.status === 'Archived') return;
+            const depStart = parseISO(d.startDate);
+            const depEnd = d.endDate ? parseISO(d.endDate) : addMonths(depStart, 6); // visual default 
+
+            // Pre
+            (d.laborPlan?.pre || []).forEach(seg => {
+                if (!seg.duration) return;
+                const segEnd = addDays(depStart, -(seg.offset || 0));
+                const segStart = addDays(segEnd, -(seg.duration - 1));
+                try {
+                    eachDayOfInterval({ start: segStart, end: segEnd })
+                        .forEach(day => addToBucket(day, seg.categoryId, seg.hours));
+                } catch (e) { }
+            });
+
+            // During
+            (d.laborPlan?.during || []).forEach(seg => {
+                if (!d.endDate && isBefore(depStart, addMonths(new Date(), -120))) return;
+                try {
+                    eachDayOfInterval({ start: depStart, end: depEnd })
+                        .forEach(day => addToBucket(day, seg.categoryId, seg.hours));
+                } catch (e) { }
+            });
+
+            // Post
+            if (d.endDate) {
+                (d.laborPlan?.post || []).forEach(seg => {
+                    if (!seg.duration) return;
+                    const segStart = addDays(depEnd, (seg.offset || 0));
+                    const segEnd = addDays(segStart, (seg.duration - 1));
+                    try {
+                        eachDayOfInterval({ start: segStart, end: segEnd })
+                            .forEach(day => addToBucket(day, seg.categoryId, seg.hours));
+                    } catch (e) { }
+                });
             }
         });
-        return entry;
-    }).sort((a, b) => a.name.localeCompare(b.name));
 
-    const colors = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#9333ea', '#0891b2'];
+        // 2. Process Overhead
+        overheadData.forEach(seg => {
+            if (!seg.startDate || !seg.endDate || !seg.hours) return;
+            try {
+                eachDayOfInterval({ start: parseISO(seg.startDate), end: parseISO(seg.endDate) })
+                    .forEach(day => addToBucket(day, seg.categoryId, seg.hours));
+            } catch (e) { }
+        });
+
+        return Object.values(buckets).sort((a, b) => a.date - b.date);
+
+    }, [data.deployments, data.overhead, data.laborCategories]);
+
+    const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
     return (
         <div className="space-y-6">
@@ -75,25 +126,34 @@ export default function Dashboard() {
                 <h3 className="text-lg font-semibold text-slate-100 mb-6">Monthly Labor Hours (Equivalent)</h3>
                 <div className="h-80 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData}>
+                        <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <defs>
+                                {data.laborCategories.map((cat, index) => (
+                                    <linearGradient key={cat.id} id={`colorDash${cat.id}`} x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={CHART_COLORS[index % CHART_COLORS.length]} stopOpacity={0.8} />
+                                        <stop offset="95%" stopColor={CHART_COLORS[index % CHART_COLORS.length]} stopOpacity={0} />
+                                    </linearGradient>
+                                ))}
+                            </defs>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
-                            <XAxis dataKey="name" stroke="#94a3b8" />
-                            <YAxis stroke="#94a3b8" />
+                            <XAxis dataKey="name" stroke="#94a3b8" fontSize="12px" tick={{ fill: '#94a3b8' }} />
+                            <YAxis stroke="#94a3b8" fontSize="12px" tick={{ fill: '#94a3b8' }} />
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#0f172a', borderRadius: '8px', border: '1px solid #1e293b', color: '#f1f5f9' }}
+                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#f1f5f9' }}
                                 itemStyle={{ color: '#e2e8f0' }}
                             />
                             <Legend />
                             {data.laborCategories.map((cat, index) => (
-                                <Bar
+                                <Area
                                     key={cat.id}
+                                    type="monotone"
                                     dataKey={cat.name}
-                                    stackId="a"
-                                    fill={colors[index % colors.length]}
-                                    radius={[4, 4, 0, 0]}
+                                    stackId="1"
+                                    stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                                    fill={`url(#colorDash${cat.id})`}
                                 />
                             ))}
-                        </BarChart>
+                        </AreaChart>
                     </ResponsiveContainer>
                 </div>
             </div>
