@@ -174,8 +174,7 @@ export function StoreProvider({ children }) {
             addLaborEntry,
             addInvoice,
             updateInvoice,
-            addInvoice,
-            updateInvoice,
+
             deleteInvoice,
             updateBillingItem,
             bulkUpdateBillingItems,

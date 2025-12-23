@@ -11,9 +11,9 @@ class TestBillingLogic(unittest.TestCase):
         self.assertEqual(result['remainderDays'], 5)
         self.assertEqual(result['totalDays'], 20)
 
-    def test_shore_35_days(self):
+    def test_ship_35_days(self):
         # 35 days
-        result = calculate_billing_periods('2025-01-01', '2025-02-04', 'Shore')
+        result = calculate_billing_periods('2025-01-01', '2025-02-04', 'Ship')
         # 35 // 15 = 2, 35 % 15 = 5
         self.assertEqual(result['periods15Day'], 2)
         self.assertEqual(result['remainderDays'], 5)

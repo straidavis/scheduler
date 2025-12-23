@@ -20,7 +20,7 @@ def calculate_billing_periods(start_date: str, end_date: str, deploy_type: str) 
     # Note: the JS test had an expectation for 'overAndAbove' which was confusing.
     # Based on UI: 
     # Land has 'Over & Above' (Daily Cap) - likely a separate cost bucket, not necessarily time unit?
-    # Shore has 'Single Day CLIN' - likely the remainder.
+    # Ship has 'Single Day CLIN' - likely the remainder.
     
     # We return the calculated time units.
     return {
@@ -68,8 +68,8 @@ def generate_billing_items_for_deployment(d: Dict[str, Any]) -> List[Dict[str, A
     # Remainder (Daily Rate) or Over/Above logic?
     # Based on filters: '15-Day CLIN', 'Daily Rate', 'Over & Above'
     
-    # If Shore: Remainder is "Daily Rate".
-    if d.get('type') == 'Shore' and remainder > 0:
+    # If Ship/Shore: Remainder is "Daily Rate".
+    if d.get('type') in ['Ship', 'Shore'] and remainder > 0:
         # User requested separate lines for each 1day CLIN
         for i in range(remainder):
             day_date = current_date + timedelta(days=i)

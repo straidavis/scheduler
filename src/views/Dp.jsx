@@ -9,7 +9,7 @@ export default function Deployments() {
     const [isAdding, setIsAdding] = useState(false);
     const [newDeployment, setNewDeployment] = useState({
         name: '',
-        type: 'Land', // Land or Shore
+        type: 'Land', // Land or Ship
         startDate: '',
         endDate: '',
         fiscalYear: 2025
@@ -80,16 +80,16 @@ export default function Deployments() {
                                     Land Based
                                 </button>
                                 <button
-                                    onClick={() => setNewDeployment({ ...newDeployment, type: 'Shore' })}
+                                    onClick={() => setNewDeployment({ ...newDeployment, type: 'Ship' })}
                                     className={cn(
                                         "flex-1 py-2 px-4 rounded-lg border flex items-center justify-center gap-2 transition-all",
-                                        newDeployment.type === 'Shore'
+                                        newDeployment.type === 'Ship'
                                             ? "bg-blue-50 border-blue-200 text-blue-700 ring-1 ring-blue-200"
                                             : "border-gray-200 hover:bg-gray-50"
                                     )}
                                 >
                                     <Anchor className="h-4 w-4" />
-                                    Shore Based
+                                    Ship Based
                                 </button>
                             </div>
                         </div>

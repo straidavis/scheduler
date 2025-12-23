@@ -34,7 +34,7 @@ class Deployment(BaseModel):
     startDate: str
     endDate: str
     name: str
-    type: str # 'Land' or 'Shore'
+    type: str # 'Land' or 'Ship'
     laborPlan: DeploymentLaborPlan = DeploymentLaborPlan()
     # Legacy fields (optional support)
     laborPlanningMode: Optional[str] = None

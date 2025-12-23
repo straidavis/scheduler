@@ -10,9 +10,15 @@ export default function Deployments() {
     const { data, addDeployment, updateDeployment, deleteDeployment } = useStore();
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [filters, setFilters] = useState({
+        startDate: '',
+        endDate: '',
+        fiscalYear: '',
+        orderingPeriod: ''
+    });
     const emptyDeployment = {
         name: '',
-        type: 'Land', // Land or Shore
+        type: 'Land', // Land or Ship
         startDate: '',
         endDate: '',
         fiscalYear: '',
@@ -146,31 +152,150 @@ export default function Deployments() {
 
     const getComputedStatus = (start, end) => {
         if (!start) return 'Draft';
-        const now = startOfDay(new Date());
-        const s = startOfDay(parseISO(start));
+        try {
+            const now = startOfDay(new Date());
+            const s = startOfDay(parseISO(start));
+            if (isNaN(s)) return 'Draft';
 
-        if (isBefore(now, s)) return 'Planned';
+            if (isBefore(now, s)) return 'Planned';
 
-        if (end) {
-            const e = startOfDay(parseISO(end));
-            if (isAfter(now, e)) return 'Completed';
+            if (end) {
+                const e = startOfDay(parseISO(end));
+                if (!isNaN(e) && isAfter(now, e)) return 'Completed';
+            }
+            return 'Started';
+        } catch (e) {
+            return 'Draft';
         }
-        return 'Started';
     };
+
+    const filteredDeployments = (data.deployments || []).filter(d => {
+        if (filters.fiscalYear && (!d.fiscalYear || d.fiscalYear.toString() !== filters.fiscalYear)) return false;
+        if (filters.orderingPeriod) {
+            // Check if deployment ordering period range matches or overlaps?? 
+            // Or simpler: just check if the ordering period label matches if we stored it?
+            // current data stores orderingPeriodStart/End dates.
+            // Let's assume the user selects an ID corresponding to ORDERING_PERIODS
+            // We'll compare the start/end dates.
+            // Actually, we don't store the "ID" of the ordering period on the deployment, just the dates.
+            // But we can check if the deployment's start date falls within the selected period filter.
+            // Let's import ORDERING_PERIODS to map it back if needed, or just compare dates?
+            // Simpler: The user probably wants to filter by "which ordering period this deployment falls into".
+            // We can re-derive the ordering period label from the deployment start date.
+            const op = getOrderingPeriod(d.startDate);
+            if (op && op.id !== filters.orderingPeriod) return false;
+            // If the deployment doesn't have an ordering period but a filter is set, hide it
+            if (!op && filters.orderingPeriod) return false;
+        }
+        if (filters.startDate && d.startDate < filters.startDate) return false;
+        if (filters.endDate && d.endDate > filters.endDate) return false; // Deployment ends after filter end? or overlaps? Standard is usually "starts after X, ends before Y" or overlap. Let's do inclusive bounds.
+        // Actually for pure "within range":
+        if (filters.startDate && d.endDate && d.endDate < filters.startDate) return false; // Entirely before
+        if (filters.endDate && d.startDate > filters.endDate) return false; // Entirely after
+
+        return true;
+    });
+
+    const calculateTotalAmount = (deployments) => {
+        return deployments.reduce((total, d) => {
+            // We need to estimate cost. 
+            // We can duplicate the billing logic here or use a simplified version.
+            // (startDate, endDate, type, clinPrice15, clinPriceSingle)
+            if (!d.startDate || !d.endDate) return total;
+            const start = parseISO(d.startDate);
+            const end = parseISO(d.endDate);
+            const days = (end - start) / (1000 * 60 * 60 * 24) + 1;
+            if (days < 0) return total;
+
+            const periods = Math.floor(days / 15);
+            const remainder = days % 15;
+
+            const cost15 = periods * (parseFloat(d.clinPrice15) || 0);
+            let costRem = 0;
+            if (['Ship', 'Shore'].includes(d.type)) {
+                costRem = remainder * (parseFloat(d.clinPriceSingle) || 0);
+            }
+            // Land 'Over & Above' logic is vague, ignoring for total for now unless it's a fixed cost?
+
+            return total + cost15 + costRem;
+        }, 0);
+    };
+
+    const totalAmount = Array.isArray(filteredDeployments) ? calculateTotalAmount(filteredDeployments) : 0;
+
+    if (!data || !data.deployments) return <div>Loading...</div>;
 
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-8">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Deployments</h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">Manage deployment schedules and details</p>
+            <div className="flex flex-col gap-6">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Deployments</h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1">Manage deployment schedules and details</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="text-right">
+                            <div className="text-sm text-slate-500 dark:text-slate-400">Total Estimated Cost</div>
+                            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">${totalAmount.toLocaleString()}</div>
+                        </div>
+                        <button
+                            onClick={() => setIsAdding(!isAdding)}
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
+                        >
+                            {isAdding ? 'Cancel' : <><Plus size={20} /> New Deployment</>}
+                        </button>
+                    </div>
                 </div>
-                <button
-                    onClick={() => setIsAdding(!isAdding)}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
-                >
-                    {isAdding ? 'Cancel' : <><Plus size={20} /> New Deployment</>}
-                </button>
+
+                {/* Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-100 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 uppercase">Fiscal Year</label>
+                        <select
+                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm"
+                            value={filters.fiscalYear}
+                            onChange={e => setFilters({ ...filters, fiscalYear: e.target.value })}
+                        >
+                            <option value="">All Years</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 uppercase">Ordering Period</label>
+                        <select
+                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm"
+                            value={filters.orderingPeriod}
+                            onChange={e => setFilters({ ...filters, orderingPeriod: e.target.value })}
+                        >
+                            <option value="">All Periods</option>
+                            <option value="1">OP1</option>
+                            <option value="2">OP2</option>
+                            <option value="3">OP3</option>
+                            <option value="4">OP4</option>
+                            <option value="5">OP5</option>
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 uppercase">Start Range</label>
+                        <input
+                            type="date"
+                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm"
+                            value={filters.startDate}
+                            onChange={e => setFilters({ ...filters, startDate: e.target.value })}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 uppercase">End Range</label>
+                        <input
+                            type="date"
+                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm"
+                            value={filters.endDate}
+                            onChange={e => setFilters({ ...filters, endDate: e.target.value })}
+                        />
+                    </div>
+                </div>
             </div>
 
             {isAdding && (
@@ -196,7 +321,7 @@ export default function Deployments() {
                             <div>
                                 <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Type</label>
                                 <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-lg">
-                                    {['Land', 'Shore'].map(type => (
+                                    {['Land', 'Ship'].map(type => (
                                         <button
                                             key={type}
                                             onClick={() => setNewDeployment({ ...newDeployment, type })}
@@ -264,7 +389,7 @@ export default function Deployments() {
                             <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Financials</h3>
 
                             {/* Shore Only: Single Day CLIN */}
-                            {newDeployment.type === 'Shore' && (
+                            {newDeployment.type === 'Ship' && (
                                 <div>
                                     <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">CLIN Price (Single Day)</label>
                                     <div className="relative">
@@ -332,65 +457,73 @@ export default function Deployments() {
             )}
 
             <div className="grid grid-cols-1 gap-4">
-                {data.deployments.map(d => (
-                    <div key={d.id} className="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 hover:border-blue-500/50 transition-all">
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-4">
-                                <div className={cn(
-                                    "p-3 rounded-lg",
-                                    d.type === 'Land' ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                                )}>
-                                    {d.type === 'Land' ? <MapPin size={24} /> : <Anchor size={24} />}
+                {filteredDeployments.map(d => {
+                    const op = getOrderingPeriod(d.startDate);
+                    return (
+                        <div key={d.id} className="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 hover:border-blue-500/50 transition-all">
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-4">
+                                    <div className={cn(
+                                        "p-3 rounded-lg",
+                                        d.type === 'Land' ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                                    )}>
+                                        {d.type === 'Land' ? <MapPin size={24} /> : <Anchor size={24} />}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{d.name}</h3>
+                                        <div className="flex items-center gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                            <span className="flex items-center gap-1">
+                                                <CalendarIcon size={14} />
+                                                {d.startDate} — {d.endDate || 'Ongoing'}
+                                            </span>
+                                            <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-medium">
+                                                FY{d.fiscalYear}
+                                            </span>
+                                            {op && (
+                                                <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-medium">
+                                                    Order P. {op.label}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{d.name}</h3>
-                                    <div className="flex items-center gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                        <span className="flex items-center gap-1">
-                                            <CalendarIcon size={14} />
-                                            {d.startDate} — {d.endDate || 'Ongoing'}
-                                        </span>
-                                        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-medium">
-                                            FY{d.fiscalYear}
-                                        </span>
+                                <div className="flex flex-col items-end gap-2">
+                                    <span className={cn(
+                                        "px-2.5 py-1 rounded-full text-xs font-semibold border",
+                                        (() => {
+                                            const status = getComputedStatus(d.startDate, d.endDate);
+                                            switch (status) {
+                                                case 'Started': return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800";
+                                                case 'Completed': return "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700";
+                                                default: return "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800";
+                                            }
+                                        })()
+                                    )}>
+                                        {getComputedStatus(d.startDate, d.endDate)}
+                                    </span>
+                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={() => startEdit(d)}
+                                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm('Are you sure you want to delete this deployment?')) {
+                                                    deleteDeployment(d.id);
+                                                }
+                                            }}
+                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                        >
+                                            <Trash size={18} />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex flex-col items-end gap-2">
-                                <span className={cn(
-                                    "px-2.5 py-1 rounded-full text-xs font-semibold border",
-                                    (() => {
-                                        const status = getComputedStatus(d.startDate, d.endDate);
-                                        switch (status) {
-                                            case 'Started': return "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800";
-                                            case 'Completed': return "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700";
-                                            default: return "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800";
-                                        }
-                                    })()
-                                )}>
-                                    {getComputedStatus(d.startDate, d.endDate)}
-                                </span>
-                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={() => startEdit(d)}
-                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                                    >
-                                        Edit
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            if (confirm('Are you sure you want to delete this deployment?')) {
-                                                deleteDeployment(d.id);
-                                            }
-                                        }}
-                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                    >
-                                        <Trash size={18} />
-                                    </button>
-                                </div>
-                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
 
                 {data.deployments.length === 0 && !isAdding && (
                     <div className="text-center py-12 text-slate-500 dark:text-slate-400">

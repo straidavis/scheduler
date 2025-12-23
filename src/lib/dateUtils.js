@@ -88,33 +88,38 @@ export const ORDERING_PERIODS = [
 
 export function getFiscalYear(dateString) {
     if (!dateString) return '';
-    const date = parseISO(dateString);
-    const year = date.getFullYear();
-    const month = date.getMonth(); // 0-indexed, 0 = Jan, 3 = Apr
+    try {
+        const date = parseISO(dateString);
+        if (isNaN(date)) return '';
+        const year = date.getFullYear();
+        const month = date.getMonth(); // 0-indexed, 0 = Jan, 3 = Apr
 
-    // "Fiscal years are start in Apr of the year and go until March the following."
-    // If Apr (3) or later, it's the next year's FY.
-    // e.g. Apr 2025 is FY26.
-    if (month >= 3) {
-        return year + 1;
-    } else {
-        return year;
+        // "Fiscal years are start in Apr of the year and go until March the following."
+        if (month >= 3) {
+            return year + 1;
+        } else {
+            return year;
+        }
+    } catch (e) {
+        return '';
     }
 }
 
 export function getOrderingPeriod(dateString) {
     if (!dateString) return null;
-    const date = parseISO(dateString);
+    try {
+        const date = parseISO(dateString);
+        if (isNaN(date)) return null;
 
-    // Check which period the date falls into
-    // We only care about the start date determining the period?
-    // "deployments should auto populate the ordering period ... based on the start date"
+        // Check which period the date falls into
+        const period = ORDERING_PERIODS.find(p => {
+            const start = parseISO(p.start);
+            const end = parseISO(p.end);
+            return isWithinInterval(date, { start, end });
+        });
 
-    const period = ORDERING_PERIODS.find(p => {
-        const start = parseISO(p.start);
-        const end = parseISO(p.end);
-        return isWithinInterval(date, { start, end });
-    });
-
-    return period || null;
+        return period || null;
+    } catch (e) {
+        return null; // Return null if date is invalid
+    }
 }
