@@ -45,7 +45,12 @@ INITIAL_DATA = {
         "3": { "land15": 0, "landOA": 0, "ship15": 0, "ship1": 0 },
         "4": { "land15": 0, "landOA": 0, "ship15": 0, "ship1": 0 },
         "5": { "land15": 0, "landOA": 0, "ship15": 0, "ship1": 0 }
-    }
+    },
+    "scheduleItems": [],
+    "scheduleDependencies": [],
+    "resources": [],
+    "resourceAssignments": [],
+    "timelineViews": []
 }
 
 def load_data():
@@ -132,8 +137,173 @@ async def get_monthly_labor():
     return aggregate_monthly_hours(
         data.get("deployments", []), 
         data.get("overhead", []), 
-        data.get("laborCategories", [])
+        data.get("laborCategories", []),
+        data.get("resourceAssignments", []), # NEW: Pass assignments
+        data.get("scheduleItems", []) # NEW: Pass items for date lookup
     )
+
+
+# --- Scheduler Endpoints ---
+
+@app.get("/api/scheduler/items")
+async def get_scheduler_items():
+    data = load_data()
+    # Merge deployments + local items? 
+    # For v1, the frontend will request deployments separately or we merge here.
+    # Let's keep distinct API for flexibility, but maybe the frontend wants one list.
+    # The requirement says "Server-side ScheduleAssembler that merges".
+    
+    deployments = data.get("deployments", [])
+    local_items = data.get("scheduleItems", [])
+    
+    # Convert deployments to schedule items structure on the fly
+    merged = []
+    for d in deployments:
+        # Check if we have a local override or metadata
+        # Find local item with deploymentId == d.id
+        local = next((i for i in local_items if i.get('deploymentId') == d['id']), None)
+        
+        if local:
+            # Merge: deployment is source of truth for dates/title
+            # But local might have metadata, sortOrder, parentId
+            item = local.copy()
+            item['title'] = d['name']
+            item['startAt'] = d['startDate']
+            item['endAt'] = d['endDate'] # Using endDate as endAt
+            item['type'] = 'deployment'
+            merged.append(item)
+        else:
+            # Create transient item
+            item = {
+                "id": f"dep_{d['id']}", # transient ID
+                "deploymentId": d['id'],
+                "type": 'deployment',
+                "title": d['name'],
+                "startAt": d['startDate'],
+                "endAt": d['endDate'],
+                "percentComplete": 0,
+                "parentId": None, 
+                "sortOrder": 0,
+                "metadata": { "status": "Synced" } # Default
+            }
+            merged.append(item)
+            
+    # Add purely local items (that aren't linked to deployments)
+    for i in local_items:
+        if not i.get('deploymentId'):
+            merged.append(i)
+            
+    return merged
+
+@app.post("/api/scheduler/items")
+async def upsert_scheduler_item(item: Dict[str, Any]):
+    data = load_data()
+    items = data.get("scheduleItems", [])
+    
+    # Check if exists
+    idx = next((index for (index, d) in enumerate(items) if d["id"] == item["id"]), None)
+    
+    if idx is not None:
+        items[idx] = item
+    else:
+        items.append(item)
+        
+    data["scheduleItems"] = items
+    
+    # Sync back to deployment if linked
+    if item.get('deploymentId'):
+        deps = data.get("deployments", [])
+        d_idx = next((index for (index, d) in enumerate(deps) if d["id"] == item["deploymentId"]), None)
+        if d_idx is not None:
+            # Update deployment source of truth
+            deps[d_idx]['startDate'] = item['startAt']
+            deps[d_idx]['endDate'] = item['endAt']
+            # Optionally update name if changed
+            deps[d_idx]['name'] = item['title']
+            
+    save_data(data)
+    return {"status": "success", "item": item}
+
+@app.delete("/api/scheduler/items/{item_id}")
+async def delete_scheduler_item(item_id: str):
+    data = load_data()
+    items = data.get("scheduleItems", [])
+    data["scheduleItems"] = [i for i in items if i["id"] != item_id]
+    save_data(data)
+    return {"status": "success"}
+
+@app.get("/api/scheduler/dependencies")
+async def get_scheduler_dependencies():
+    data = load_data()
+    return data.get("scheduleDependencies", [])
+
+@app.post("/api/scheduler/dependencies")
+async def save_dependency(dep: Dict[str, Any]):
+    data = load_data()
+    deps = data.get("scheduleDependencies", [])
+    # Upsert
+    idx = next((index for (index, d) in enumerate(deps) if d["id"] == dep["id"]), None)
+    if idx is not None:
+        deps[idx] = dep
+    else:
+        deps.append(dep)
+    data["scheduleDependencies"] = deps
+    save_data(data)
+    return {"status": "success"}
+
+@app.delete("/api/scheduler/dependencies/{dep_id}")
+async def delete_dependency(dep_id: str):
+    data = load_data()
+    deps = data.get("scheduleDependencies", [])
+    data["scheduleDependencies"] = [d for d in deps if d["id"] != dep_id]
+    save_data(data)
+    return {"status": "success"}
+
+# --- Resources ---
+
+@app.get("/api/scheduler/resources")
+async def get_resources():
+    data = load_data()
+    return data.get("resources", [])
+
+@app.post("/api/scheduler/resources")
+async def upsert_resource(res: Dict[str, Any]):
+    data = load_data()
+    resources = data.get("resources", [])
+    idx = next((index for (index, r) in enumerate(resources) if r["id"] == res["id"]), None)
+    if idx is not None:
+        resources[idx] = res
+    else:
+        resources.append(res)
+    data["resources"] = resources
+    save_data(data)
+    return {"status": "success"}
+
+@app.get("/api/scheduler/assignments")
+async def get_assignments():
+    data = load_data()
+    return data.get("resourceAssignments", [])
+
+@app.post("/api/scheduler/assignments")
+async def upsert_assignment(assign: Dict[str, Any]):
+    data = load_data()
+    assigns = data.get("resourceAssignments", [])
+    idx = next((index for (index, a) in enumerate(assigns) if a["id"] == assign["id"]), None)
+    if idx is not None:
+        assigns[idx] = assign
+    else:
+        assigns.append(assign)
+    data["resourceAssignments"] = assigns
+    save_data(data)
+    return {"status": "success"}
+
+@app.delete("/api/scheduler/assignments/{assign_id}")
+async def delete_assignment(assign_id: str):
+    data = load_data()
+    assigns = data.get("resourceAssignments", [])
+    data["resourceAssignments"] = [a for a in assigns if a["id"] != assign_id]
+    save_data(data)
+    return {"status": "success"}
 
 
 

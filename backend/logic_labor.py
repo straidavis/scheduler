@@ -101,7 +101,78 @@ def calculate_weekly_plan_stats(entries: Generator[Dict, None, None]) -> List[Di
         })
     return results
 
-def aggregate_monthly_hours(deployments: List[Dict], overhead: List[Dict], categories: List[Dict]) -> Dict[str, Dict[str, float]]:
+def generate_assignment_entries(assignments: List[Dict], deployments: List[Dict], schedule_items: List[Dict] = []) -> Generator[Dict, None, None]:
+    # Need to look up item dates. 
+    # If item is deployment-backed, find deployment. 
+    # If local, find schedule item.
+    # Note: caller must pass deployments and schedule_items.
+    # We'll update the signature of aggregate_monthly_hours to receive them.
+    
+    # helper to find dates
+    def get_dates(item_id):
+        # 1 schema: deployments
+        d = next((x for x in deployments if x['id'] == item_id or f"dep_{x['id']}" == item_id), None)
+        if d: return parse_date(d['startDate']), parse_date(d['endDate'])
+        
+        # 2 schema: local items
+        # We need schedule_items passed in.
+        # For now, let's assume assignments might have dates or we fetch them?
+        # The assignment links to scheduleItemId.
+        if schedule_items:
+            s = next((x for x in schedule_items if x['id'] == item_id), None)
+            if s and s.get('startAt') and s.get('endAt'):
+                 return parse_date(s['startAt']), parse_date(s['endAt'])
+        
+        return None, None
+
+    for a in assignments:
+        start, end = get_dates(a['scheduleItemId'])
+        if not start or not end: continue
+        
+        days = (end - start).days + 1
+        if days <= 0: continue
+        
+        allocation = float(a.get('allocationValue', 0))
+        mode = a.get('allocationMode', 'hours')
+        
+        # Calculate daily hours
+        daily_hours = 0
+        if mode == 'hours':
+            # Total hours spread over days? Or hours PER DAY?
+            # Requirement: "allocation_value (numeric) // e.g., 16 hours total, 0.5 FTE"
+            # It says "16 hours total". So spread it.
+            # BUT, usually people say "Allocated 50%" = 4 hours/day.
+            # Let's assume 'hours' = TOTAL HOURS for the duration.
+            # 'fte' = Fraction of day (e.g. 1.0 = 8 hours).
+            # 'percent' = Percent of day (e.g. 50 = 4 hours).
+            daily_hours = allocation / days
+        elif mode == 'fte':
+            daily_hours = allocation * 8.0 # Assuming 8h day
+        elif mode == 'percent':
+            daily_hours = (allocation / 100.0) * 8.0
+            
+        for i in range(days):
+            curr = start + timedelta(days=i)
+            # Skip weekends? Resource calendar?
+            # For MVP, simple spread. logic_labor.py doesn't seem to skip weekends in `generate_daily_plan_entries`
+            # except implicitly if days_during counts all days.
+            # Let's stick to simple spread for now.
+            
+            yield {
+                'date': curr,
+                'categoryId': a['resourceId'], # Using resourceId as categoryId for aggregation if they line up? 
+                # Wait, charts group by "category". 
+                # If resourceId is a person "Matt", but chart expects "Senior Engineer".
+                # We need to map Resource -> Role/Category?
+                # The existing charts use `laborCategories` (id: lc_1).
+                # New resources have `type`.
+                # If we want it to show up, we might need to map it or just use the resource name as a new category.
+                # Let's yield the resourceId and assume the frontend handles dynamic keys or we look up resource name.
+                'hours': daily_hours,
+                'isOvertimeEligible': False # Look up resource?
+            }
+
+def aggregate_monthly_hours(deployments: List[Dict], overhead: List[Dict], categories: List[Dict], assignments: List[Dict] = [], schedule_items: List[Dict] = []) -> Dict[str, Dict[str, float]]:
     # Generate daily stream from plans (Deployments)
     deployment_stream = generate_daily_plan_entries(deployments)
     
@@ -119,21 +190,18 @@ def aggregate_monthly_hours(deployments: List[Dict], overhead: List[Dict], categ
                     'date': curr,
                     'categoryId': seg['categoryId'],
                     'hours': float(seg['hours']),
-                    'isOvertimeEligible': False # Usually overhead implies flat rate or salaried, but could be parameter
+                    'isOvertimeEligible': False
                 }
 
-    # Combine streams for weekly stats calculation?
-    # Actually, we should probably keep them separate if we want "Overhead" to be a distinct bucket,
-    # OR combine them if we want to check total hours per person per week for OT.
-    # Requirement: "overhead rates for the full program and separately... labor around a deployment"
-    # This implies visualization might be separate, but for the "Monthly Stats" chart, we aggregate everything.
-    # However, if OT is calculated on TOTAL hours, we must combine.
-    # Assuming Overhead counts towards OT thresholds if the employee works both? 
-    # Let's simple-sum them for now, but we need to feed them into weekly stats if we want OT logic globally.
-    
     import itertools
     overhead_stream = generate_overhead_entries(overhead)
-    all_stream = itertools.chain(deployment_stream, overhead_stream)
+    
+    # Scheduler stream
+    # Note: We need schedule_items to resolve dates for local items. 
+    # main.py needs to pass this.
+    assignment_stream = generate_assignment_entries(assignments, deployments, schedule_items)
+    
+    all_stream = itertools.chain(deployment_stream, overhead_stream, assignment_stream)
     
     # Calculate OT grouping by week
     weekly_stats = calculate_weekly_plan_stats(all_stream)
@@ -150,10 +218,11 @@ def aggregate_monthly_hours(deployments: List[Dict], overhead: List[Dict], categ
             hours = entry['hours']
             
             # Distribute OT premium if eligible
-            if entry['isOvertimeEligible'] and week['eligibleHours'] > 0:
+            if entry.get('isOvertimeEligible') and week['eligibleHours'] > 0:
                 share = entry['hours'] / week['eligibleHours']
                 hours += extra_equivalent_hours * share
             
             months[month_key][cat_id] += hours
             
     return {k: dict(v) for k, v in months.items()}
+

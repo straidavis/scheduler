@@ -5,6 +5,7 @@ import { USCGLogo } from '../components/USCGLogo';
 
 const NAV_ITEMS = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { label: 'Scheduler', path: '/scheduler', icon: Calendar },
     { label: 'Deployments', path: '/deployments', icon: Plane },
     { label: 'Calendar', path: '/calendar', icon: Calendar },
     { label: 'Billing', path: '/billing', icon: FileText },

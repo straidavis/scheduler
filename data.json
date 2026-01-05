@@ -585,5 +585,51 @@
             "ship15": 0,
             "ship1": 0
         }
-    }
+    },
+    "scheduleItems": [
+        {
+            "id": "dep_frpp744",
+            "deploymentId": "frpp744",
+            "type": "deployment",
+            "title": "JAMES Install",
+            "startAt": "2025-07-04",
+            "endAt": "2025-07-13",
+            "percentComplete": 0,
+            "parentId": null,
+            "sortOrder": 0,
+            "metadata": {
+                "status": "Synced"
+            }
+        },
+        {
+            "id": "dep_qcxfxjo",
+            "deploymentId": "qcxfxjo",
+            "type": "deployment",
+            "title": "MIDGETT",
+            "startAt": "2025-07-16",
+            "endAt": "2025-10-03",
+            "percentComplete": 0,
+            "parentId": null,
+            "sortOrder": 0,
+            "metadata": {
+                "status": "Synced"
+            }
+        },
+        {
+            "id": "e8d79f13-2f43-4078-a642-39d864b047e2",
+            "title": "New Task",
+            "type": "task",
+            "startAt": "2026-01-05",
+            "endAt": "2026-01-05",
+            "progress": 0,
+            "metadata": {
+                "status": "Draft"
+            },
+            "resources": ""
+        }
+    ],
+    "scheduleDependencies": [],
+    "resources": [],
+    "resourceAssignments": [],
+    "timelineViews": []
 }

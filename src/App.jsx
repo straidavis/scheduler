@@ -10,6 +10,8 @@ import Work from './views/Work';
 import Pricing from './views/Pricing';
 import Cfg from './views/Cfg';
 
+import Scheduler from './views/Scheduler';
+
 function App() {
   return (
     <StoreProvider>
@@ -17,6 +19,7 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Dash />} />
+            <Route path="/scheduler" element={<Scheduler />} />
             <Route path="/deployments" element={<Deploys />} />
             <Route path="/calendar" element={<Cal />} />
             <Route path="/billing" element={<Bill />} />

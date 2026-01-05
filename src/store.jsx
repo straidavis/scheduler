@@ -196,7 +196,6 @@ export function StoreProvider({ children }) {
             updateBillingItem,
             bulkUpdateBillingItems,
             deleteDeployment,
-            deleteDeployment,
             setOverhead,
             updatePricing
         }}>
