@@ -14,11 +14,15 @@ export default function Deployments() {
         startDate: '',
         endDate: '',
         fiscalYear: '',
-        orderingPeriod: ''
+        orderingPeriod: '',
+        type: '',
+        costAccount: '',
+        status: ''
     });
     const emptyDeployment = {
         name: '',
-        type: 'Land', // Land or Ship
+        type: 'Land', // Land, Ship, Other
+        costAccount: '',
         startDate: '',
         endDate: '',
         fiscalYear: '',
@@ -31,10 +35,12 @@ export default function Deployments() {
         laborEndDate: '',
         clinPriceSingle: '',
         clinPrice15: '',
-        clinPriceOverAbove: ''
+        clinPriceOverAbove: '',
+        price: '' // for 'Other' type
     };
     const [newDeployment, setNewDeployment] = useState({ ...emptyDeployment });
 
+    // Auto-populate Fiscal Year and Ordering Period when Start Date changes
     // Auto-populate Fiscal Year and Ordering Period when Start Date changes
     // Auto-populate Fiscal Year and Ordering Period when Start Date changes
     useEffect(() => {
@@ -45,12 +51,15 @@ export default function Deployments() {
                 const res = await fetch(`http://localhost:8000/api/calculate-date-info?date=${newDeployment.startDate}`);
                 if (res.ok) {
                     const info = await res.json();
-                    setNewDeployment(prev => ({
-                        ...prev,
-                        fiscalYear: info.fiscalYear,
-                        orderingPeriodStart: info.orderingPeriod ? info.orderingPeriod.start : prev.orderingPeriodStart,
-                        orderingPeriodEnd: info.orderingPeriod ? info.orderingPeriod.end : prev.orderingPeriodEnd
-                    }));
+                    setNewDeployment(prev => {
+                        const next = {
+                            ...prev,
+                            fiscalYear: info.fiscalYear,
+                            orderingPeriodStart: info.orderingPeriod ? info.orderingPeriod.start : prev.orderingPeriodStart,
+                            orderingPeriodEnd: info.orderingPeriod ? info.orderingPeriod.end : prev.orderingPeriodEnd
+                        };
+                        return next;
+                    });
                 }
             } catch (e) {
                 console.error("Failed to fetch date info", e);
@@ -58,6 +67,55 @@ export default function Deployments() {
         };
         fetchData();
     }, [newDeployment.startDate]);
+
+    // Auto-populate Pricing from Store based on Ordering Period
+    useEffect(() => {
+        if (!newDeployment.startDate) return;
+        const op = getOrderingPeriod(newDeployment.startDate);
+
+        if (op && data.pricing && data.pricing[op.id]) {
+            const prices = data.pricing[op.id];
+            setNewDeployment(prev => {
+                // Only update if currently 'Land' or 'Ship'
+                // Don't overwrite if manual 'Other'
+
+                let updates = {};
+                if (prev.type === 'Land') {
+                    updates = {
+                        clinPrice15: prices.land15 || '',
+                        clinPriceOverAbove: prices.landOA || ''
+                    };
+                } else if (prev.type === 'Ship') {
+                    updates = {
+                        clinPrice15: prices.ship15 || '',
+                        clinPriceSingle: prices.ship1 || ''
+                    };
+                }
+
+                // Only update if changed prevents infinite loops ideally, but specific field updates are safe
+                return { ...prev, ...updates };
+            });
+        }
+    }, [newDeployment.startDate, newDeployment.type, data.pricing]);
+
+    const getComputedStatus = (start, end) => {
+        if (!start) return 'Draft';
+        try {
+            const now = startOfDay(new Date());
+            const s = startOfDay(parseISO(start));
+            if (isNaN(s)) return 'Draft';
+
+            if (isBefore(now, s)) return 'Planned';
+
+            if (end) {
+                const e = startOfDay(parseISO(end));
+                if (!isNaN(e) && isAfter(now, e)) return 'Completed';
+            }
+            return 'Started';
+        } catch (e) {
+            return 'Draft';
+        }
+    };
 
     const handleSave = () => {
         if (!newDeployment.name || !newDeployment.startDate) {
@@ -69,10 +127,30 @@ export default function Deployments() {
         if (editingId) {
             const original = data.deployments.find(d => d.id === editingId);
             if (original) {
+                const now = startOfDay(new Date());
+                const s = startOfDay(parseISO(original.startDate));
+                const e = original.endDate ? startOfDay(parseISO(original.endDate)) : null;
+
+                // Warning 1: Status protection (existing)
                 const status = getComputedStatus(original.startDate, original.endDate);
                 if (status === 'Started' && original.startDate !== newDeployment.startDate) {
-                    if (!confirm("⚠️ Warning: This deployment has alread started.\n\nChanging the start date may affect existing billing cycles and labor history. Are you sure you want to proceed?")) {
+                    if (!confirm("⚠️ Warning: This deployment has already started.\n\nChanging the start date may affect existing billing cycles and labor history. Are you sure you want to proceed?")) {
                         return;
+                    }
+                }
+
+                // Warning 2: Past Date Changes
+                // If start date changed AND (new date is in past OR old date was in past)
+                if (original.startDate !== newDeployment.startDate) {
+                    const newS = startOfDay(parseISO(newDeployment.startDate));
+                    if (isBefore(newS, now)) {
+                        if (!confirm("⚠️ Warning: You are moving the start date to a past date. This may retroactively create billing items. Continue?")) return;
+                    }
+                }
+                if (original.endDate !== newDeployment.endDate && newDeployment.endDate) {
+                    const newE = startOfDay(parseISO(newDeployment.endDate));
+                    if (isBefore(newE, now)) {
+                        if (!confirm("⚠️ Warning: You are setting the end date to the past. This will complete the deployment. Continue?")) return;
                     }
                 }
             }
@@ -96,6 +174,20 @@ export default function Deployments() {
             }
         }
 
+        // Land Type: Strict 15-Day Logic
+        if (newDeployment.type === 'Land' && newDeployment.startDate && newDeployment.endDate) {
+            const start = startOfDay(parseISO(newDeployment.startDate));
+            const end = startOfDay(parseISO(newDeployment.endDate));
+            // Use Math.round to handle any potential float quirks, though date differences usually fine if cleaned
+            const diffTime = Math.abs(end - start);
+            const days = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+            if (days % 15 !== 0) {
+                alert(`Land deployments must be in 15-day increments.\nCurrent duration: ${days} days.\nNearest valid durations: ${Math.floor(days / 15) * 15} or ${Math.ceil(days / 15) * 15} days.`);
+                return;
+            }
+        }
+
         const payload = { ...newDeployment, status: 'Active' };
         if (editingId) {
             updateDeployment(editingId, payload);
@@ -112,7 +204,8 @@ export default function Deployments() {
         setEditingId(deployment.id);
         setNewDeployment({
             name: deployment.name,
-            type: deployment.type,
+            type: deployment.type || 'Land',
+            costAccount: deployment.costAccount || '',
             startDate: deployment.startDate,
             endDate: deployment.endDate || '',
             fiscalYear: deployment.fiscalYear,
@@ -125,7 +218,8 @@ export default function Deployments() {
             laborEndDate: deployment.laborEndDate || '',
             clinPriceSingle: deployment.clinPriceSingle || '',
             clinPrice15: deployment.clinPrice15 || '',
-            clinPriceOverAbove: deployment.clinPriceOverAbove || ''
+            clinPriceOverAbove: deployment.clinPriceOverAbove || '',
+            price: deployment.price || ''
         });
         setIsAdding(true);
     };
@@ -150,48 +244,22 @@ export default function Deployments() {
         );
     }
 
-    const getComputedStatus = (start, end) => {
-        if (!start) return 'Draft';
-        try {
-            const now = startOfDay(new Date());
-            const s = startOfDay(parseISO(start));
-            if (isNaN(s)) return 'Draft';
 
-            if (isBefore(now, s)) return 'Planned';
-
-            if (end) {
-                const e = startOfDay(parseISO(end));
-                if (!isNaN(e) && isAfter(now, e)) return 'Completed';
-            }
-            return 'Started';
-        } catch (e) {
-            return 'Draft';
-        }
-    };
 
     const filteredDeployments = (data.deployments || []).filter(d => {
+        if (filters.type && d.type !== filters.type) return false;
+        if (filters.costAccount && (!d.costAccount || !d.costAccount.toLowerCase().includes(filters.costAccount.toLowerCase()))) return false;
+        if (filters.status && getComputedStatus(d.startDate, d.endDate) !== filters.status) return false;
         if (filters.fiscalYear && (!d.fiscalYear || d.fiscalYear.toString() !== filters.fiscalYear)) return false;
         if (filters.orderingPeriod) {
-            // Check if deployment ordering period range matches or overlaps?? 
-            // Or simpler: just check if the ordering period label matches if we stored it?
-            // current data stores orderingPeriodStart/End dates.
-            // Let's assume the user selects an ID corresponding to ORDERING_PERIODS
-            // We'll compare the start/end dates.
-            // Actually, we don't store the "ID" of the ordering period on the deployment, just the dates.
-            // But we can check if the deployment's start date falls within the selected period filter.
-            // Let's import ORDERING_PERIODS to map it back if needed, or just compare dates?
-            // Simpler: The user probably wants to filter by "which ordering period this deployment falls into".
-            // We can re-derive the ordering period label from the deployment start date.
             const op = getOrderingPeriod(d.startDate);
             if (op && op.id !== filters.orderingPeriod) return false;
-            // If the deployment doesn't have an ordering period but a filter is set, hide it
             if (!op && filters.orderingPeriod) return false;
         }
         if (filters.startDate && d.startDate < filters.startDate) return false;
-        if (filters.endDate && d.endDate > filters.endDate) return false; // Deployment ends after filter end? or overlaps? Standard is usually "starts after X, ends before Y" or overlap. Let's do inclusive bounds.
-        // Actually for pure "within range":
-        if (filters.startDate && d.endDate && d.endDate < filters.startDate) return false; // Entirely before
-        if (filters.endDate && d.startDate > filters.endDate) return false; // Entirely after
+        if (filters.endDate && d.endDate > filters.endDate) return false;
+        if (filters.startDate && d.endDate && d.endDate < filters.startDate) return false;
+        if (filters.endDate && d.startDate > filters.endDate) return false;
 
         return true;
     });
@@ -215,7 +283,9 @@ export default function Deployments() {
             if (['Ship', 'Shore'].includes(d.type)) {
                 costRem = remainder * (parseFloat(d.clinPriceSingle) || 0);
             }
-            // Land 'Over & Above' logic is vague, ignoring for total for now unless it's a fixed cost?
+            if (d.type === 'Other') {
+                return total + (parseFloat(d.price) || 0);
+            }
 
             return total + cost15 + costRem;
         }, 0);
@@ -248,7 +318,44 @@ export default function Deployments() {
                 </div>
 
                 {/* Filters */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-100 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="grid grid-cols-1 md:grid-cols-7 gap-4 bg-slate-100 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 uppercase">Status</label>
+                        <select
+                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm"
+                            value={filters.status}
+                            onChange={e => setFilters({ ...filters, status: e.target.value })}
+                        >
+                            <option value="">All Statuses</option>
+                            <option value="Draft">Draft</option>
+                            <option value="Planned">Planned</option>
+                            <option value="Started">Started</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 uppercase">Type</label>
+                        <select
+                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm"
+                            value={filters.type}
+                            onChange={e => setFilters({ ...filters, type: e.target.value })}
+                        >
+                            <option value="">All Types</option>
+                            <option value="Land">Land</option>
+                            <option value="Ship">Ship</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-500 uppercase">Cost Account</label>
+                        <input
+                            type="text"
+                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm"
+                            value={filters.costAccount}
+                            onChange={e => setFilters({ ...filters, costAccount: e.target.value })}
+                            placeholder="Search..."
+                        />
+                    </div>
                     <div className="space-y-1">
                         <label className="text-xs font-medium text-slate-500 uppercase">Fiscal Year</label>
                         <select
@@ -315,13 +422,14 @@ export default function Deployments() {
                                     className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     value={newDeployment.name}
                                     onChange={e => setNewDeployment({ ...newDeployment, name: e.target.value })}
-                                    placeholder="e.g., PACIFIC-25-01"
+                                    placeholder={newDeployment.type === 'Other' ? "Event Name" : "e.g., PACIFIC-25-01"}
                                 />
                             </div>
+
                             <div>
                                 <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Type</label>
                                 <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-lg">
-                                    {['Land', 'Ship'].map(type => (
+                                    {['Land', 'Ship', 'Other'].map(type => (
                                         <button
                                             key={type}
                                             onClick={() => setNewDeployment({ ...newDeployment, type })}
@@ -332,11 +440,24 @@ export default function Deployments() {
                                                     : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                                             )}
                                         >
-                                            {type === 'Land' ? <MapPin size={16} /> : <Anchor size={16} />}
+                                            {type === 'Land' && <MapPin size={16} />}
+                                            {type === 'Ship' && <Anchor size={16} />}
+                                            {type === 'Other' && <CalendarIcon size={16} />}
                                             {type}
                                         </button>
                                     ))}
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Cost Account</label>
+                                <input
+                                    type="text"
+                                    className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    value={newDeployment.costAccount}
+                                    onChange={e => setNewDeployment({ ...newDeployment, costAccount: e.target.value })}
+                                    placeholder="e.g., 1000-123-45"
+                                />
                             </div>
                         </div>
 
@@ -384,57 +505,77 @@ export default function Deployments() {
                             </div>
                         </div>
 
+
                         {/* Financials */}
                         <div className="space-y-4">
                             <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Financials</h3>
 
-                            {/* Shore Only: Single Day CLIN */}
-                            {newDeployment.type === 'Ship' && (
+                            {/* OTHER Type Simplification */}
+                            {newDeployment.type === 'Other' ? (
                                 <div>
-                                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">CLIN Price (Single Day)</label>
+                                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Estimated Price</label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-2 text-slate-400">$</span>
                                         <input
                                             type="number"
                                             className="w-full pl-7 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
-                                            value={newDeployment.clinPriceSingle}
-                                            onChange={e => setNewDeployment({ ...newDeployment, clinPriceSingle: e.target.value })}
+                                            value={newDeployment.price}
+                                            onChange={e => setNewDeployment({ ...newDeployment, price: e.target.value })}
                                             placeholder="0.00"
                                         />
                                     </div>
                                 </div>
-                            )}
+                            ) : (
+                                <>
+                                    {/* Shore Only: Single Day CLIN */}
+                                    {newDeployment.type === 'Ship' && (
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">CLIN Price (Single Day)</label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-2 text-slate-400">$</span>
+                                                <input
+                                                    type="number"
+                                                    readOnly
+                                                    className="w-full pl-7 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed focus:ring-0"
+                                                    value={newDeployment.clinPriceSingle}
+                                                    placeholder="Auto"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
 
-                            {/* Both: 15-Day CLIN */}
-                            <div>
-                                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">CLIN Price (15-Day)</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-2 text-slate-400">$</span>
-                                    <input
-                                        type="number"
-                                        className="w-full pl-7 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={newDeployment.clinPrice15}
-                                        onChange={e => setNewDeployment({ ...newDeployment, clinPrice15: e.target.value })}
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Land Only: Over & Above */}
-                            {newDeployment.type === 'Land' && (
-                                <div>
-                                    <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Over & Above (Daily Cap)</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-2 text-slate-400">$</span>
-                                        <input
-                                            type="number"
-                                            className="w-full pl-7 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
-                                            value={newDeployment.clinPriceOverAbove}
-                                            onChange={e => setNewDeployment({ ...newDeployment, clinPriceOverAbove: e.target.value })}
-                                            placeholder="0.00"
-                                        />
+                                    {/* Both: 15-Day CLIN */}
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">CLIN Price (15-Day)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-2 text-slate-400">$</span>
+                                            <input
+                                                type="number"
+                                                readOnly
+                                                className="w-full pl-7 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed focus:ring-0"
+                                                value={newDeployment.clinPrice15}
+                                                placeholder="Auto"
+                                            />
+                                        </div>
                                     </div>
-                                </div>
+
+                                    {/* Land Only: Over & Above */}
+                                    {newDeployment.type === 'Land' && (
+                                        <div>
+                                            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Over & Above (15-Day Period)</label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-2 text-slate-400">$</span>
+                                                <input
+                                                    type="number"
+                                                    readOnly
+                                                    className="w-full pl-7 p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed focus:ring-0"
+                                                    value={newDeployment.clinPriceOverAbove}
+                                                    placeholder="Auto"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
@@ -465,9 +606,13 @@ export default function Deployments() {
                                 <div className="flex items-start gap-4">
                                     <div className={cn(
                                         "p-3 rounded-lg",
-                                        d.type === 'Land' ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                                        d.type === 'Land' ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" :
+                                            d.type === 'Ship' ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400" :
+                                                "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
                                     )}>
-                                        {d.type === 'Land' ? <MapPin size={24} /> : <Anchor size={24} />}
+                                        {d.type === 'Land' && <MapPin size={24} />}
+                                        {d.type === 'Ship' && <Anchor size={24} />}
+                                        {d.type === 'Other' && <CalendarIcon size={24} />}
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{d.name}</h3>
@@ -479,6 +624,11 @@ export default function Deployments() {
                                             <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-medium">
                                                 FY{d.fiscalYear}
                                             </span>
+                                            {d.costAccount && (
+                                                <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-medium">
+                                                    CA: {d.costAccount}
+                                                </span>
+                                            )}
                                             {op && (
                                                 <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-medium">
                                                     Order P. {op.label}

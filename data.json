@@ -1,8 +1,261 @@
 {
     "deployments": [
         {
+            "name": "MCC 1 - 25 May '25",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-05-26",
+            "endDate": "2025-05-30",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2024-07-14",
+            "orderingPeriodEnd": "2025-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "16809.65",
+            "status": "Active",
+            "id": "jo01d1f"
+        },
+        {
+            "name": "MCC 2 - 23 Jun '25",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-06-23",
+            "endDate": "2025-06-27",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2024-07-14",
+            "orderingPeriodEnd": "2025-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "16809.65",
+            "status": "Active",
+            "id": "prttce8"
+        },
+        {
+            "name": "MCC 3 - 25 Aug '25",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-08-25",
+            "endDate": "2025-08-29",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2024-07-14",
+            "orderingPeriodEnd": "2025-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "16809.65",
+            "status": "Active",
+            "id": "i0ql86a"
+        },
+        {
+            "name": "MCC Sector SD",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-08-19",
+            "endDate": "2025-08-21",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2024-07-14",
+            "orderingPeriodEnd": "2025-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "33619.30",
+            "status": "Active",
+            "id": "iclfcoh"
+        },
+        {
+            "name": "MCC Sector San Juan",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-09-23",
+            "endDate": "2025-09-25",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2024-07-14",
+            "orderingPeriodEnd": "2025-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "33619.30",
+            "status": "Active",
+            "id": "xb5jt74"
+        },
+        {
+            "name": "MIDGETT Install",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-06-09",
+            "endDate": "2025-06-18",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2024-07-14",
+            "orderingPeriodEnd": "2025-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "46178.10",
+            "status": "Active",
+            "id": "un5ahwk"
+        },
+        {
+            "name": "JAMES Install",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-07-04",
+            "endDate": "2025-07-13",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2024-07-14",
+            "orderingPeriodEnd": "2025-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "46178.10",
+            "status": "Active",
+            "id": "frpp744"
+        },
+        {
+            "name": "KIMBALL Installation",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-08-04",
+            "endDate": "2025-08-08",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2024-07-14",
+            "orderingPeriodEnd": "2025-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "46178.10",
+            "status": "Active",
+            "id": "ep7zvb6"
+        },
+        {
+            "name": "BERTHOLF Install",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-11-12",
+            "endDate": "2025-11-14",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2025-10-01",
+            "orderingPeriodEnd": "2026-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "46178.10",
+            "status": "Active",
+            "id": "ufgymqz"
+        },
+        {
+            "name": "STRATTON Install",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-12-01",
+            "endDate": "2025-12-03",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2025-10-01",
+            "orderingPeriodEnd": "2026-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "46178.10",
+            "status": "Active",
+            "id": "8c3h62s"
+        },
+        {
+            "name": "WAESCH Install",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-12-01",
+            "endDate": "2025-12-03",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2025-10-01",
+            "orderingPeriodEnd": "2026-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "360321.00",
+            "clinPriceOverAbove": "315803.00",
+            "price": "46178.10",
+            "status": "Active",
+            "id": "ghzqz2b"
+        },
+        {
+            "name": "STONE Install",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-06-09",
+            "endDate": "2025-06-18",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2024-07-14",
+            "orderingPeriodEnd": "2025-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "46178.10",
+            "status": "Active",
+            "id": "t4e3ctz"
+        },
+        {
             "name": "MIDGETT",
             "type": "Ship",
+            "costAccount": "5058.01",
             "startDate": "2025-07-16",
             "endDate": "2025-10-03",
             "fiscalYear": 2026,
@@ -16,12 +269,14 @@
             "clinPriceSingle": "10600.91",
             "clinPrice15": "181406.10",
             "clinPriceOverAbove": "",
+            "price": "",
             "status": "Active",
-            "id": "bdjbc24"
+            "id": "qcxfxjo"
         },
         {
             "name": "STONE",
             "type": "Ship",
+            "costAccount": "5058.01",
             "startDate": "2025-07-13",
             "endDate": "2025-11-19",
             "fiscalYear": 2026,
@@ -35,13 +290,15 @@
             "clinPriceSingle": "10600.91",
             "clinPrice15": "181406.10",
             "clinPriceOverAbove": "",
+            "price": "",
             "status": "Active",
-            "id": "rh380cx"
+            "id": "ibryn8x"
         },
         {
             "name": "JAMES",
             "type": "Ship",
-            "startDate": "2025-09-09",
+            "costAccount": "5058.01",
+            "startDate": "2025-09-08",
             "endDate": "2025-12-10",
             "fiscalYear": 2026,
             "orderingPeriodStart": "2024-07-14",
@@ -54,33 +311,16 @@
             "clinPriceSingle": "10600.91",
             "clinPrice15": "181406.10",
             "clinPriceOverAbove": "",
+            "price": "",
             "status": "Active",
-            "id": "fwef6zs"
-        },
-        {
-            "name": "JAMES Shakedown",
-            "type": "Ship",
-            "startDate": "2025-08-04",
-            "endDate": "2025-08-18",
-            "fiscalYear": 2026,
-            "orderingPeriodStart": "2024-07-14",
-            "orderingPeriodEnd": "2025-09-30",
-            "clinPrice": "",
-            "laborPlanningMode": "relative",
-            "laborDaysAfter": 0,
-            "laborStartDate": "",
-            "laborEndDate": "",
-            "clinPriceSingle": "",
-            "clinPrice15": "181406.10",
-            "clinPriceOverAbove": "",
-            "status": "Active",
-            "id": "09r1e6a"
+            "id": "46ba4wm"
         },
         {
             "name": "KIMBALL",
             "type": "Ship",
+            "costAccount": "5058.01",
             "startDate": "2025-09-03",
-            "endDate": "2025-01-05",
+            "endDate": "2026-01-02",
             "fiscalYear": 2026,
             "orderingPeriodStart": "2024-07-14",
             "orderingPeriodEnd": "2025-09-30",
@@ -92,14 +332,37 @@
             "clinPriceSingle": "10600.91",
             "clinPrice15": "181406.10",
             "clinPriceOverAbove": "",
+            "price": "",
             "status": "Active",
-            "id": "lp8da4g"
+            "id": "giexuu2"
         },
         {
-            "name": "STRATTON",
-            "type": "Ship",
-            "startDate": "2026-01-04",
-            "endDate": "2026-03-31",
+            "name": "JAMES Shakedown",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2025-08-01",
+            "endDate": "2025-08-08",
+            "fiscalYear": 2026,
+            "orderingPeriodStart": "2024-07-14",
+            "orderingPeriodEnd": "2025-09-30",
+            "clinPrice": "",
+            "laborPlanningMode": "relative",
+            "laborDaysAfter": 0,
+            "laborStartDate": "",
+            "laborEndDate": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
+            "clinPriceOverAbove": "",
+            "price": "181406.10",
+            "status": "Active",
+            "id": "hg40jlx"
+        },
+        {
+            "name": "HAMILTON Install",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2026-01-19",
+            "endDate": "2026-01-22",
             "fiscalYear": 2026,
             "orderingPeriodStart": "2025-10-01",
             "orderingPeriodEnd": "2026-09-30",
@@ -108,17 +371,19 @@
             "laborDaysAfter": 0,
             "laborStartDate": "",
             "laborEndDate": "",
-            "clinPriceSingle": "10499.75",
-            "clinPrice15": "180160.46",
-            "clinPriceOverAbove": "",
+            "clinPriceSingle": "",
+            "clinPrice15": "360321.00",
+            "clinPriceOverAbove": "315803.00",
+            "price": "46178.10",
             "status": "Active",
-            "id": "kuu118l"
+            "id": "5zo3vmj"
         },
         {
-            "name": "BERTHOLF",
-            "type": "Ship",
-            "startDate": "2026-01-21",
-            "endDate": "2026-04-14",
+            "name": "CALHOUN Install",
+            "type": "Other",
+            "costAccount": "5058.01",
+            "startDate": "2026-02-02",
+            "endDate": "2026-02-04",
             "fiscalYear": 2026,
             "orderingPeriodStart": "2025-10-01",
             "orderingPeriodEnd": "2026-09-30",
@@ -127,30 +392,12 @@
             "laborDaysAfter": 0,
             "laborStartDate": "",
             "laborEndDate": "",
-            "clinPriceSingle": "10499.75",
-            "clinPrice15": "180160.46",
+            "clinPriceSingle": "",
+            "clinPrice15": "",
             "clinPriceOverAbove": "",
+            "price": "46178.10",
             "status": "Active",
-            "id": "vczoj5a"
-        },
-        {
-            "name": "WAESCHE",
-            "type": "Ship",
-            "startDate": "2026-01-31",
-            "endDate": "2026-05-15",
-            "fiscalYear": 2026,
-            "orderingPeriodStart": "2025-10-01",
-            "orderingPeriodEnd": "2026-09-30",
-            "clinPrice": "",
-            "laborPlanningMode": "relative",
-            "laborDaysAfter": 0,
-            "laborStartDate": "",
-            "laborEndDate": "",
-            "clinPriceSingle": "10499.75",
-            "clinPrice15": "180160.46",
-            "clinPriceOverAbove": "",
-            "status": "Active",
-            "id": "9t1pa4d"
+            "id": "ubfdgy5"
         }
     ],
     "laborCategories": [
@@ -174,13 +421,169 @@
         }
     ],
     "laborEntries": [],
-    "overhead": [],
     "fiscalYearRates": [
         {
             "year": 2025,
             "periodRates": {}
         }
     ],
-    "invoices": [],
-    "billingState": {}
+    "invoices": [
+        {
+            "id": "evkrlve",
+            "invoiceNumber": "INV-0000001633",
+            "dateInvoiced": "2025-08-28",
+            "datePaid": "2025-09-03",
+            "status": "Paid",
+            "notes": "",
+            "attachments": [],
+            "amount": 897778
+        },
+        {
+            "id": "0lnlxje",
+            "invoiceNumber": "INV-0000001694",
+            "dateInvoiced": "2025-09-12",
+            "datePaid": "2025-09-25",
+            "status": "Paid",
+            "notes": "",
+            "attachments": [],
+            "amount": 640825.35
+        },
+        {
+            "id": "93ae7jx",
+            "invoiceNumber": "INV-0000001993",
+            "dateInvoiced": "2025-12-23",
+            "datePaid": "",
+            "status": "Pending",
+            "notes": "",
+            "attachments": [],
+            "amount": 1088436.6
+        }
+    ],
+    "overhead": [
+        {
+            "id": "hogzoy4",
+            "categoryId": "lc_1",
+            "startDate": "2025-01-01",
+            "endDate": "2025-12-23",
+            "hours": 8
+        }
+    ],
+    "billingState": {
+        "jo01d1f_other": {
+            "invoiceNumber": "INV-0000001633",
+            "status": "Invoiced"
+        },
+        "prttce8_other": {
+            "invoiceNumber": "INV-0000001633",
+            "status": "Invoiced"
+        },
+        "un5ahwk_other": {
+            "invoiceNumber": "INV-0000001633",
+            "status": "Invoiced"
+        },
+        "frpp744_other": {
+            "invoiceNumber": "INV-0000001633",
+            "status": "Invoiced"
+        },
+        "t4e3ctz_other": {
+            "invoiceNumber": "INV-0000001633",
+            "status": "Invoiced"
+        },
+        "qcxfxjo_15_0": {
+            "invoiceNumber": "INV-0000001633",
+            "status": "Invoiced"
+        },
+        "qcxfxjo_15_1": {
+            "invoiceNumber": "INV-0000001633",
+            "status": "Invoiced"
+        },
+        "ibryn8x_15_0": {
+            "invoiceNumber": "INV-0000001633",
+            "status": "Invoiced"
+        },
+        "ibryn8x_15_1": {
+            "invoiceNumber": "INV-0000001633",
+            "status": "Invoiced"
+        },
+        "iclfcoh_other": {
+            "invoiceNumber": "INV-0000001694",
+            "status": "Invoiced"
+        },
+        "i0ql86a_other": {
+            "invoiceNumber": "INV-0000001694",
+            "status": "Invoiced"
+        },
+        "ep7zvb6_other": {
+            "invoiceNumber": "INV-0000001694",
+            "status": "Invoiced"
+        },
+        "qcxfxjo_15_2": {
+            "invoiceNumber": "INV-0000001694",
+            "status": "Invoiced"
+        },
+        "ibryn8x_15_2": {
+            "invoiceNumber": "INV-0000001694",
+            "status": "Invoiced"
+        },
+        "ibryn8x_15_3": {
+            "invoiceNumber": "INV-0000001694",
+            "status": "Invoiced"
+        },
+        "ibryn8x_15_4": {
+            "invoiceNumber": "INV-0000001993",
+            "status": "Invoiced"
+        },
+        "ibryn8x_15_5": {
+            "invoiceNumber": "INV-0000001993",
+            "status": "Invoiced"
+        },
+        "46ba4wm_15_0": {
+            "status": "Invoiced",
+            "invoiceNumber": "INV-0000001993"
+        },
+        "46ba4wm_15_1": {
+            "status": "Invoiced",
+            "invoiceNumber": "INV-0000001993"
+        },
+        "giexuu2_15_0": {
+            "status": "Invoiced",
+            "invoiceNumber": "INV-0000001993"
+        },
+        "giexuu2_15_1": {
+            "status": "Invoiced",
+            "invoiceNumber": "INV-0000001993"
+        }
+    },
+    "pricing": {
+        "1": {
+            "land15": "360321.00",
+            "landOA": "315803.00",
+            "ship15": "181406.10",
+            "ship1": "10600.91"
+        },
+        "2": {
+            "land15": "360321.00",
+            "landOA": "315803.00",
+            "ship15": "180160.46",
+            "ship1": "10499.75"
+        },
+        "3": {
+            "land15": 0,
+            "landOA": 0,
+            "ship15": 0,
+            "ship1": 0
+        },
+        "4": {
+            "land15": 0,
+            "landOA": 0,
+            "ship15": 0,
+            "ship1": 0
+        },
+        "5": {
+            "land15": 0,
+            "landOA": 0,
+            "ship15": 0,
+            "ship1": 0
+        }
+    }
 }

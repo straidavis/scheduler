@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { generateId } from '../lib/utils';
 import { cn } from '../lib/utils';
-import { Plus, Save } from 'lucide-react';
+import { Plus, Save, Database, Download } from 'lucide-react';
 
 export default function Settings() {
     const { data, addLaborCategory, updateLaborCategory } = useStore();
@@ -28,6 +28,25 @@ export default function Settings() {
         if (!editForm.name) return;
         updateLaborCategory(editingId, editForm);
         setEditingId(null);
+    };
+
+    const [backupStatus, setBackupStatus] = useState(null); // { type: 'success' | 'error', message: '' }
+
+    const handleBackup = async () => {
+        try {
+            const res = await fetch('http://localhost:8000/api/backup', { method: 'POST' });
+            const result = await res.json();
+            if (result.status === 'success') {
+                setBackupStatus({ type: 'success', message: `Backup created: ${result.file}` });
+            } else {
+                setBackupStatus({ type: 'error', message: result.message || 'Backup failed' });
+            }
+        } catch (error) {
+            setBackupStatus({ type: 'error', message: 'Network error or backend unreachable' });
+        }
+
+        // Clear status after 5 seconds
+        setTimeout(() => setBackupStatus(null), 5000);
     };
 
     return (
@@ -158,6 +177,35 @@ export default function Settings() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-slate-800">
+                    <h3 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
+                        <Database className="h-5 w-5 text-slate-400" />
+                        System Maintenance
+                    </h3>
+                </div>
+                <div className="p-6 space-y-4">
+                    <p className="text-slate-400 text-sm">Create a local backup of the current database.</p>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleBackup}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors font-medium border border-slate-700"
+                        >
+                            <Download className="h-4 w-4" />
+                            Backup Database
+                        </button>
+                        {backupStatus && (
+                            <span className={cn(
+                                "text-sm font-medium px-3 py-1 rounded-full",
+                                backupStatus.type === 'success' ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"
+                            )}>
+                                {backupStatus.message}
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

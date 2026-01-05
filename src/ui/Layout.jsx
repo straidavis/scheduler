@@ -9,6 +9,7 @@ const NAV_ITEMS = [
     { label: 'Calendar', path: '/calendar', icon: Calendar },
     { label: 'Billing', path: '/billing', icon: FileText },
     { label: 'Invoices', path: '/invoices', icon: FileText },
+    { label: 'Pricing', path: '/pricing', icon: FileText },
     { label: 'Labor', path: '/labor', icon: Users },
     { label: 'Settings', path: '/settings', icon: SettingsIcon },
 ];

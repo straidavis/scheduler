@@ -15,7 +15,14 @@ const INITIAL_DATA = {
     ],
     invoices: [],
     overhead: [], // { id, categoryId, month, hours }
-    billingState: {} // Map of billingItemId -> { status, invoiceNumber }
+    billingState: {}, // Map of billingItemId -> { status, invoiceNumber }
+    pricing: {
+        "1": { land15: 0, landOA: 0, ship15: 0, ship1: 0 },
+        "2": { land15: 0, landOA: 0, ship15: 0, ship1: 0 },
+        "3": { land15: 0, landOA: 0, ship15: 0, ship1: 0 },
+        "4": { land15: 0, landOA: 0, ship15: 0, ship1: 0 },
+        "5": { land15: 0, landOA: 0, ship15: 0, ship1: 0 },
+    }
 };
 
 export function StoreProvider({ children }) {
@@ -29,7 +36,7 @@ export function StoreProvider({ children }) {
                 const response = await fetch('http://localhost:8000/api/data');
                 if (response.ok) {
                     const jsonData = await response.json();
-                    setData(jsonData);
+                    setData({ ...INITIAL_DATA, ...jsonData });
                 } else {
                     console.error("Failed to fetch data");
                 }
@@ -163,6 +170,16 @@ export function StoreProvider({ children }) {
         setData(prev => ({ ...prev, overhead: newOverhead }));
     };
 
+    const updatePricing = (period, values) => {
+        setData(prev => ({
+            ...prev,
+            pricing: {
+                ...prev.pricing,
+                [period]: { ...prev.pricing[period], ...values }
+            }
+        }));
+    };
+
     return (
         <StoreContext.Provider value={{
             data,
@@ -179,7 +196,9 @@ export function StoreProvider({ children }) {
             updateBillingItem,
             bulkUpdateBillingItems,
             deleteDeployment,
-            setOverhead
+            deleteDeployment,
+            setOverhead,
+            updatePricing
         }}>
             {children}
         </StoreContext.Provider>

@@ -1,0 +1,5 @@
+{
+    "serverPort": 8000,
+    "clientPort": 5173,
+    "pythonPath": "python"
+}

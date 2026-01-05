@@ -7,6 +7,7 @@ import Cal from './views/Cal';
 import Bill from './views/Bill';
 import Invoices from './views/Invoices';
 import Work from './views/Work';
+import Pricing from './views/Pricing';
 import Cfg from './views/Cfg';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
             <Route path="/calendar" element={<Cal />} />
             <Route path="/billing" element={<Bill />} />
             <Route path="/invoices" element={<Invoices />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="/labor" element={<Work />} />
             <Route path="/settings" element={<Cfg />} />
           </Routes>

@@ -37,3 +37,4 @@ venv.bak/
 
 # App Data
 backend/data.json
+backups/

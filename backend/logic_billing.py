@@ -54,6 +54,8 @@ def generate_billing_items_for_deployment(d: Dict[str, Any]) -> List[Dict[str, A
     # Generate 15-day items
     for i in range(period_count):
         period_end = current_date + timedelta(days=14)
+        
+        # 1. Standard 15-Day CLIN
         items.append({
             "id": f"{d['id']}_15_{i}",
             "deploymentId": d['id'],
@@ -63,6 +65,20 @@ def generate_billing_items_for_deployment(d: Dict[str, Any]) -> List[Dict[str, A
             "endDate": period_end.isoformat(),
             "amount": rate_15
         })
+
+        # 2. Over & Above for Land (parallel to 15-day CLIN)
+        if d.get('type') == 'Land' and rate_oa > 0:
+            items.append({
+                "id": f"{d['id']}_oa_15_{i}",
+                "deploymentId": d['id'],
+                "deploymentName": d['name'],
+                "type": "Over & Above",
+                "startDate": current_date.isoformat(),
+                "endDate": period_end.isoformat(),
+                "amount": rate_oa, # User confirmed this is PER 15-day period (assuming 150 was typo for 15)
+                "description": f"Over & Above (Period {i+1})"
+            })
+
         current_date = period_end + timedelta(days=1)
         
     # Remainder (Daily Rate) or Over/Above logic?
@@ -83,15 +99,27 @@ def generate_billing_items_for_deployment(d: Dict[str, Any]) -> List[Dict[str, A
                 "amount": rate_daily,
                 "description": f"Day {i+1} of remainder"
             })
-        
-    # If Land: Over & Above. 
-    # Logic unclear from code, but UI says "Over & Above (Daily Cap)".
-    # Maybe it's a separate line item per day? Or per deployment?
-    # Let's assume it's like a daily fee applicable to ALL days? 
-    # Or just the remainder?
-    # Test billing said: "20 days land... 0 over/above".
-    # Let's leave Over & Above for now or implement as a placeholder if needed.
-    
+            
+    # Note: Land remainder O&A is not needed because Land is forced to 15-day increments in UI.
+    # But if data exists with remainder, we can leave it or ignore it. 
+    # Current request implies O&A matches 15-day CLINs.
+    # We removed the 'total duration' O&A block.
+            
+    # If Other: Flat price item
+    if d.get('type') == 'Other':
+        price = float(d.get('price', 0) or 0)
+        if price > 0:
+            items.append({
+                "id": f"{d['id']}_other",
+                "deploymentId": d['id'],
+                "deploymentName": d['name'],
+                "type": "Other",
+                "startDate": start.isoformat(),
+                "endDate": end_date, # Use full duration
+                "amount": price,
+                "description": "Flat rate event"
+            })
+
     return items
 
 def generate_all_billing_items(deployments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

@@ -47,6 +47,18 @@ class OverheadSegment(BaseModel):
     hours: float
     description: Optional[str] = None
 
+class InvoiceItem(BaseModel):
+    id: str
+    description: str
+    amount: float
+
+class Invoice(BaseModel):
+    id: str
+    date: str
+    total: float
+    items: List[InvoiceItem] = []
+    status: str = "Draft"
+
 class AppData(BaseModel):
     deployments: List[Deployment] = []
     laborCategories: List[LaborCategory] = []

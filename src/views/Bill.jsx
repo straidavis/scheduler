@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 // import { generateBillingItems } from '../lib/bill';
-import { format, parseISO, isBefore, startOfDay } from 'date-fns';
+import { format, parseISO, isBefore, startOfDay, isSameMonth } from 'date-fns';
 import { FileText, CheckCircle, Clock, AlertCircle, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { getOrderingPeriod } from '../lib/dateUtils';
 
 export default function Billing() {
     const { data, updateBillingItem, bulkUpdateBillingItems } = useStore();
@@ -12,10 +13,12 @@ export default function Billing() {
 
     // Filters
     const [filters, setFilters] = useState({
-        deployment: '',
+        search: '',
         type: '',
         status: '',
-        invoiceNumber: ''
+        invoiceNumber: '',
+        orderingPeriod: '',
+        month: ''
     });
 
     const [items, setItems] = useState([]);
@@ -51,10 +54,37 @@ export default function Billing() {
 
     // Apply Filters
     const filteredItems = enrichedItems.filter(item => {
-        if (filters.deployment && !item.deploymentName.toLowerCase().includes(filters.deployment.toLowerCase())) return false;
+        // Search Filter (Deployment Name or Description)
+        if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            const matchesName = item.deploymentName.toLowerCase().includes(searchLower);
+            const matchesDesc = item.description ? item.description.toLowerCase().includes(searchLower) : false;
+            if (!matchesName && !matchesDesc) return false;
+        }
+
+        // Type Filter
         if (filters.type && item.type !== filters.type) return false;
+
+        // Status Filter
         if (filters.status && item.status !== filters.status) return false;
+
+        // Invoice Number Filter
         if (filters.invoiceNumber && !item.invoiceNumber.toLowerCase().includes(filters.invoiceNumber.toLowerCase())) return false;
+
+        // Ordering Period Filter
+        if (filters.orderingPeriod) {
+            const op = getOrderingPeriod(item.startDate);
+            if (!op || op.id !== filters.orderingPeriod) return false;
+        }
+
+        // Month Filter
+        if (filters.month) {
+            // filters.month is strictly 'YYYY-MM'
+            const filterDate = parseISO(filters.month + '-01'); // Force 1st of month
+            const itemDate = parseISO(item.startDate);
+            if (!isSameMonth(filterDate, itemDate)) return false;
+        }
+
         return true;
     });
 
@@ -143,14 +173,18 @@ export default function Billing() {
             </div>
 
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-sm">
+            {/* Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-sm">
+                {/* Search */}
                 <input
                     type="text"
-                    placeholder="Filter Deployment..."
+                    placeholder="Search..."
                     className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm placeholder:text-slate-600"
-                    value={filters.deployment}
-                    onChange={e => setFilters({ ...filters, deployment: e.target.value })}
+                    value={filters.search}
+                    onChange={e => setFilters({ ...filters, search: e.target.value })}
                 />
+
+                {/* Type */}
                 <select
                     className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                     value={filters.type}
@@ -160,7 +194,10 @@ export default function Billing() {
                     <option value="15-Day CLIN">15-Day CLIN</option>
                     <option value="Daily Rate">Daily Rate</option>
                     <option value="Over & Above">Over & Above</option>
+                    <option value="Other">Other</option>
                 </select>
+
+                {/* Status */}
                 <select
                     className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                     value={filters.status}
@@ -172,9 +209,33 @@ export default function Billing() {
                     <option value="Invoiced">Invoiced</option>
                     <option value="Paid">Paid</option>
                 </select>
+
+                {/* Ordering Period */}
+                <select
+                    className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    value={filters.orderingPeriod}
+                    onChange={e => setFilters({ ...filters, orderingPeriod: e.target.value })}
+                >
+                    <option value="">Ordering P.</option>
+                    <option value="1">OP1</option>
+                    <option value="2">OP2</option>
+                    <option value="3">OP3</option>
+                    <option value="4">OP4</option>
+                    <option value="5">OP5</option>
+                </select>
+
+                {/* Month Picker */}
+                <input
+                    type="month"
+                    className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm placeholder:text-slate-600"
+                    value={filters.month}
+                    onChange={e => setFilters({ ...filters, month: e.target.value })}
+                />
+
+                {/* Invoice Number */}
                 <input
                     type="text"
-                    placeholder="Filter Invoice #..."
+                    placeholder="Invoice #..."
                     className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm placeholder:text-slate-600"
                     value={filters.invoiceNumber}
                     onChange={e => setFilters({ ...filters, invoiceNumber: e.target.value })}
